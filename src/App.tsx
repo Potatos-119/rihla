@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Compass, ListOrdered, Map as MapIcon, Moon, SlidersHorizontal, Sun } from 'lucide-react'
+import { Compass, ListOrdered, Map as MapIcon, SlidersHorizontal } from 'lucide-react'
 import PlanForm from './components/PlanForm'
 import TripView from './components/TripView'
 import Explore from './components/Explore'
 import MapView from './components/MapView'
 import { Arabic } from './components/bits'
+import ThemePicker from './components/ThemePicker'
+import { applyTheme, initialTheme, type Theme } from './lib/themes'
 import { DEFAULT_PREFS, buildPlan, makeStop, retime, type Plan, type Prefs } from './lib/planner'
 import { download, loadFromHash, loadLocal, saveLocal, shareUrl, toIcs } from './lib/share'
 
@@ -39,12 +41,11 @@ export default function App() {
   const [notice, setNotice] = useState<string | null>(
     start.from === 'link' ? 'Opened a shared trip. Edit it freely; your changes stay on this device.' : start.from === 'saved' ? 'Welcome back. This is the trip you saved.' : null,
   )
-  const [dark, setDark] = useState(() => localStorage.getItem('rihla.theme') === 'dark' || (!localStorage.getItem('rihla.theme') && matchMedia('(prefers-color-scheme: dark)').matches))
+  const [theme, setTheme] = useState<Theme>(initialTheme)
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark)
-    localStorage.setItem('rihla.theme', dark ? 'dark' : 'light')
-  }, [dark])
+    applyTheme(theme)
+  }, [theme])
 
   const mainRef = useRef<HTMLElement>(null)
   useEffect(() => {
@@ -96,12 +97,10 @@ export default function App() {
           <div className="flex items-center justify-between px-5 pt-4 pb-3">
             <div className="flex items-baseline gap-2.5">
               <h1 className="font-display text-[1.7rem] leading-none font-bold tracking-tight">Rihla</h1>
-              <Arabic className="text-[1.35rem] leading-none text-sand">رحلة</Arabic>
+              <Arabic className="text-[1.35rem] leading-none text-[var(--on-brand-accent)]">رحلة</Arabic>
               <span className="hidden text-sm text-pearl/60 sm:inline">Bahrain trip planner</span>
             </div>
-            <button className="icon-btn text-pearl/80 hover:bg-white/10 hover:text-pearl" onClick={() => setDark(!dark)} aria-label={dark ? 'Use light theme' : 'Use dark theme'}>
-              {dark ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
+            <ThemePicker theme={theme} onChange={setTheme} />
           </div>
           <nav className="flex gap-1 px-3" aria-label="Sections">
             {tabs.map((t) => (
@@ -122,7 +121,7 @@ export default function App() {
         <div className="serrated-h no-print shrink-0 lg:hidden" aria-hidden />
 
         {notice && (
-          <p role="status" className="no-print mx-5 mt-3 rounded-xl bg-lagoon-2 px-3 py-2 text-sm text-gulf-900">
+          <p role="status" className="no-print mx-5 mt-3 rounded-xl bg-lagoon-2 px-3 py-2 text-sm text-[var(--text)]">
             {notice}
           </p>
         )}
@@ -133,7 +132,7 @@ export default function App() {
             <TripView
               plan={plan}
               prefs={prefs}
-              dark={dark}
+              theme={theme}
               focusId={focus}
               onFocus={(id) => setFocus(id)}
               onMove={(d, i, dir) =>
@@ -191,7 +190,7 @@ export default function App() {
         aria-label="Map"
         className={`no-print min-h-0 lg:block lg:h-full ${tab === 'map' ? 'block flex-1' : 'hidden'}`}
       >
-        <MapView plan={plan} focusId={focus} dark={dark} onSelect={selectPlace} />
+        <MapView plan={plan} focusId={focus} theme={theme} onSelect={selectPlace} />
       </section>
     </div>
   )

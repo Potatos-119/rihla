@@ -4,22 +4,21 @@ import L from 'leaflet'
 import { PLACES, PLACE_BY_ID } from '../data/places'
 import { PHOTOS } from '../data/photos'
 import { BASE, fmt, type Plan } from '../lib/planner'
+import type { Theme } from '../lib/themes'
 
-export const DAY_COLORS = ['#0f3b45', '#2a8c82', '#b07a2a']
-const DAY_COLORS_DARK = ['#7fd6cb', '#e8c37a', '#f2a1ad']
-export const dayColor = (i: number, dark: boolean) => (dark ? DAY_COLORS_DARK : DAY_COLORS)[i % 3]
+export const dayColor = (i: number, theme: Theme) => theme.colors.days[i % 3]
 
 interface Props {
   plan: Plan | null
   focusId: string | null
-  dark: boolean
+  theme: Theme
   onSelect: (id: string) => void
 }
 
-function pin(n: number, color: string, active: boolean) {
+function pin(n: number, color: string, text: string, active: boolean) {
   return L.divIcon({
     className: '',
-    html: `<div class="rihla-pin${active ? ' active' : ''}" style="background:${color}"><span>${n}</span></div>`,
+    html: `<div class="rihla-pin${active ? ' active' : ''}" style="background:${color};color:${text}"><span>${n}</span></div>`,
     iconSize: [30, 30],
     iconAnchor: [15, 30],
     popupAnchor: [0, -28],
@@ -90,15 +89,15 @@ function Fit({ plan, focusId }: { plan: Plan | null; focusId: string | null }) {
   return null
 }
 
-export default function MapView({ plan, focusId, dark, onSelect }: Props) {
+export default function MapView({ plan, focusId, theme, onSelect }: Props) {
   const planned = useMemo(() => new Set(plan?.days.flatMap((d) => d.stops.map((s) => s.placeId)) ?? []), [plan])
 
   return (
     <MapContainer center={[26.15, 50.56]} zoom={11} className="h-full w-full" zoomControl={false} attributionControl>
       <TileLayer
-        key={dark ? 'dark' : 'light'}
+        key={theme.id}
         url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-        className={dark ? 'tiles-dark' : 'tiles-light'}
+        className="rihla-tiles"
         maxZoom={19}
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
@@ -113,7 +112,7 @@ export default function MapView({ plan, focusId, dark, onSelect }: Props) {
       ))}
 
       {plan?.days.map((day) => {
-        const color = dayColor(day.index, dark)
+        const color = dayColor(day.index, theme)
         const line: [number, number][] = [[BASE.lat, BASE.lng], ...day.stops.map((s) => [PLACE_BY_ID[s.placeId].lat, PLACE_BY_ID[s.placeId].lng] as [number, number])]
         return (
           <Fragment key={`${day.index}-${day.stops.map((s) => s.placeId).join()}`}>
@@ -121,7 +120,7 @@ export default function MapView({ plan, focusId, dark, onSelect }: Props) {
             {day.stops.map((s, i) => {
               const p = PLACE_BY_ID[s.placeId]
               return (
-                <Marker key={s.placeId} position={[p.lat, p.lng]} icon={pin(i + 1, color, focusId === p.id)} eventHandlers={{ click: () => onSelect(p.id) }} zIndexOffset={focusId === p.id ? 1000 : 100}>
+                <Marker key={s.placeId} position={[p.lat, p.lng]} icon={pin(i + 1, color, theme.colors.pinText, focusId === p.id)} eventHandlers={{ click: () => onSelect(p.id) }} zIndexOffset={focusId === p.id ? 1000 : 100}>
                   <Popup minWidth={220} maxWidth={240}>
                     <PopupBody id={p.id} line={`Day ${day.index + 1}, ${fmt(s.arrive)}–${fmt(s.leave)}`} />
                   </Popup>

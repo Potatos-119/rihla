@@ -15,6 +15,7 @@ Built with Claude for the Bahrain Polytechnic **AI Literacy** course (Week 9, Se
 | ![Mobile](docs/screenshots/mobile-trip.jpg) | ![Explanation panel](docs/screenshots/how-it-decided.jpg) | ![Reasons and swap](docs/screenshots/why-and-swap.jpg) |
 | ![Day cover photo](docs/screenshots/photo-day-cover.jpg) | ![Explore with photos](docs/screenshots/photo-explore.jpg) | ![Map popup with photo](docs/screenshots/photo-map-popup.jpg) |
 | ![Trip cost summary](docs/screenshots/cost-summary.jpg) | ![Over the spending limit](docs/screenshots/cost-limit-warning.jpg) | ![Checked prices in Explore](docs/screenshots/explore-prices-dark.jpg) |
+| ![Theme picker](docs/screenshots/theme-picker.jpg) | ![Sukkar theme](docs/screenshots/theme-sukkar.jpg) | ![Nokhatha theme](docs/screenshots/theme-nokhatha.jpg) |
 
 ## Features
 
@@ -29,7 +30,8 @@ Built with Claude for the Bahrain Polytechnic **AI Literacy** course (Week 9, Se
 - **Spending limit.** Set an optional limit for the whole trip, or write "under 60 BD". Rihla re-plans with a growing penalty on cost per person until the estimate fits, and says how many times it re-planned. If even the cheapest plan is over, it tells you honestly, rather than hiding it.
 - **Checked data, with sources.** Every place records where its facts were checked and when. Facts that sources disagree on are marked approximate, and that label shows in the app. See [`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md).
 - **Real photos, credited.** 22 places show a freely licensed photo from Wikimedia Commons. It appears as the hero image in Explore, a cover for each day of the trip, thumbnails on stops, and in map popups. Every large photo carries an author, licence and source credit. The other 8 places get an illustrated tile with an eight-point star lattice in the colour of their category. Images are lazy-loaded and fall back to the illustration if one fails to load.
-- **Made for Bahrain.** Bilingual place names, the serrated edge from the Bahraini flag as the signature detail, light and dark themes, and a mobile layout with a full-screen map tab.
+- **Six colour themes.** Light and Dark, plus four themes with a Bahraini mood: **Sukkar** (سكر, blush, rose and warm cream), **Lulu** (لؤلؤ, pearl, silver and deep sea), **Ghaf** (غاف, desert sand, olive and terracotta) and **Nokhatha** (نوخذة, a dhow captain's navy, brass and gold). Each is a complete token set, covering the page, cards, text, accent, header, map tiles, route and pin colours, and photo overlays. Every theme passes WCAG AA contrast (`npm run contrast`). The picker shows a swatch for each, and your choice is saved on the device.
+- **Made for Bahrain.** Bilingual place names, the serrated edge from the Bahraini flag as the signature detail, and a mobile layout with a full-screen map tab.
 
 ## How it meets the brief
 
@@ -84,6 +86,7 @@ src/
   lib/parse.ts          plain-language request → settings, with evidence
   lib/cost.ts           group size, per-stop, per-day and trip estimates
   lib/share.ts          save, share links, calendar export
+  lib/themes.ts         the six colour themes as token sets
   components/           PlanForm, TripView, Explore, MapView, small UI parts
 scripts/sample-plans.ts prints sample itineraries for checking planner changes
 ```
@@ -99,6 +102,7 @@ npm run build      # production build in dist/
 npm run sample     # print sample itineraries and cost estimates
 npm run sources    # regenerate docs/DATA-SOURCES.md from the data
 npm run check      # check that a spending limit never makes a plan dearer
+npm run contrast   # check every colour theme against WCAG AA
 ```
 
 ## Limits

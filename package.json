@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "sample": "tsx scripts/sample-plans.ts",
     "sources": "tsx scripts/data-sources.ts",
-    "check": "tsx scripts/check-limits.ts"
+    "check": "tsx scripts/check-limits.ts",
+    "contrast": "tsx scripts/check-contrast.ts"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",

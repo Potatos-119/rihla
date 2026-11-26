@@ -8,11 +8,12 @@ import { dayCost, formatRange, peopleLabel, stopCost, total, type Group } from '
 import PlacePhoto from './Photo'
 import { PHOTOS } from '../data/photos'
 import { dayColor } from './MapView'
+import type { Theme } from '../lib/themes'
 
 interface Props {
   plan: Plan
   prefs: Prefs
-  dark: boolean
+  theme: Theme
   focusId: string | null
   onFocus: (id: string) => void
   onMove: (day: number, index: number, dir: -1 | 1) => void
@@ -28,7 +29,7 @@ interface Props {
 }
 
 export default function TripView(props: Props) {
-  const { plan, prefs, dark } = props
+  const { plan, prefs, theme } = props
   const [saved, setSaved] = useState(false)
   const [copied, setCopied] = useState(false)
   const stopCount = plan.days.reduce((n, d) => n + d.stops.length, 0)
@@ -80,7 +81,7 @@ export default function TripView(props: Props) {
 
       {plan.days.map((day) => (
         <section key={day.index} aria-labelledby={`day-${day.index}`}>
-          <DayCover day={day} color={dayColor(day.index, dark)} spend={formatRange(total(dayCost(day, { adults: prefs.adults, children: prefs.children })))} />
+          <DayCover day={day} color={dayColor(day.index, theme)} spend={formatRange(total(dayCost(day, { adults: prefs.adults, children: prefs.children })))} />
 
           {day.stops.length === 0 ? (
             <p className="surface hairline rounded-xl border border-dashed p-4 text-sm">
@@ -231,7 +232,7 @@ function StopPrice({ stop, prefs }: { stop: Plan['days'][number]['stops'][number
   return (
     <p className="mt-1 text-sm">
       {t[1] === 0 ? (
-        <span className="rounded-md bg-lagoon-2 px-1.5 py-0.5 text-xs font-semibold text-gulf-900">Free</span>
+        <span className="rounded-md bg-lagoon-2 px-1.5 py-0.5 text-xs font-semibold text-[var(--text)]">Free</span>
       ) : (
         <span className="tabular-nums">
           <span className="font-semibold">≈ {formatRange(t)}</span> <span className="muted">{peopleLabel(g)}{what ? `, ${what}` : ''}</span>
@@ -259,6 +260,7 @@ function DayCover({ day, color, spend }: { day: Day; color: string; spend: strin
         <div className="aspect-[5/2] w-full" style={{ background: color }} />
       )}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-gulf-950/85 via-gulf-950/25 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1" style={{ background: color }} aria-hidden />
       <div className="pointer-events-none absolute bottom-0 left-0 p-3.5 pb-5 text-pearl">
         <div className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-full ring-2 ring-white/70" style={{ background: color }} aria-hidden />
