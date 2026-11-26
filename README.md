@@ -4,7 +4,11 @@
 
 Built with Claude for the Bahrain Polytechnic **AI Literacy** course (Week 9, Session 16: *"Use Claude to create an app. Publish the code and share the link."*).
 
+**Try it: https://potatos-119.github.io/rihla/**
+
 ![Rihla on desktop](docs/screenshots/desktop-trip.jpg)
+
+![Rihla in dark mode](docs/screenshots/desktop-trip-dark.jpg)
 
 | Phone | How it decided | Why this stop and Swap |
 | --- | --- | --- |
@@ -30,8 +34,8 @@ Built with Claude for the Bahrain Polytechnic **AI Literacy** course (Week 9, Se
 | Share the link in the Blog Page | Live site on GitHub Pages (link below). A ready-to-paste blog paragraph and Teams post are in [`docs/BLOG.md`](docs/BLOG.md). |
 | AI Literacy theme | The app treats planning as **inputs → rules → output** and shows all three. It also lists what the system *can't* know (live traffic, today's exact hours, your mood). That is the critical-thinking point from the course's "inputs and outputs" activity. |
 
-**Live app:** _added after publishing_
-**Code:** _added after publishing_
+**Live app:** https://potatos-119.github.io/rihla/
+**Code:** https://github.com/Potatos-119/rihla
 
 ## How the planner works
 
