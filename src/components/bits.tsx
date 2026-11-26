@@ -36,28 +36,38 @@ export function PlaceBadge({ place, size = 40 }: { place: Place; size?: number }
   )
 }
 
-const COST_LABEL = ['Free', 'Under BD 3', 'BD 3 to 10', 'Over BD 10']
-
-export function Cost({ cost }: { cost: Place['cost'] }) {
-  if (cost === 0) return <span>Free</span>
-  return (
-    <span title={COST_LABEL[cost]}>
-      <span className="sr-only">{COST_LABEL[cost]}</span>
-      <span aria-hidden>
-        BD{' '}
-        <span className="tracking-tight">
-          {'•••'.slice(0, cost)}
-          <span className="opacity-30">{'•••'.slice(cost)}</span>
-        </span>
-      </span>
-    </span>
-  )
-}
-
 export function Arabic({ children, className = '' }: { children: string; className?: string }) {
   return (
     <span lang="ar" dir="rtl" className={`font-arabic ${className}`}>
       {children}
     </span>
+  )
+}
+
+export function Stepper({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string
+  value: number
+  min: number
+  max: number
+  onChange: (n: number) => void
+}) {
+  return (
+    <div className="seg !grid-cols-[2rem_1fr_2rem] !grid-flow-row items-center" role="group" aria-label={label}>
+      <button type="button" onClick={() => onChange(Math.max(min, value - 1))} disabled={value <= min} aria-label={`Fewer ${label.toLowerCase()}`} className="disabled:opacity-30">
+        −
+      </button>
+      <output className="text-center text-sm font-semibold tabular-nums" aria-live="polite">
+        {value}
+      </output>
+      <button type="button" onClick={() => onChange(Math.min(max, value + 1))} disabled={value >= max} aria-label={`More ${label.toLowerCase()}`} className="disabled:opacity-30">
+        +
+      </button>
+    </div>
   )
 }

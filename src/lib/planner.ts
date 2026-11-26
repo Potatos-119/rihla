@@ -1,4 +1,5 @@
 import { PLACES, PLACE_BY_ID, type Interest, type Meal, type Place } from '../data/places'
+import { midPerPerson, total, tripCost } from './cost'
 
 export type Pace = 'relaxed' | 'balanced' | 'packed'
 export type Budget = 'free' | 'low' | 'any'
@@ -14,6 +15,10 @@ export interface Prefs {
   budget: Budget
   kids: boolean
   meals: boolean
+  adults: number
+  children: number
+  /** optional spending limit for the whole trip and group, in BD */
+  limit: number | null
 }
 
 export const DEFAULT_PREFS: Prefs = {
@@ -26,6 +31,9 @@ export const DEFAULT_PREFS: Prefs = {
   budget: 'any',
   kids: false,
   meals: true,
+  adults: 2,
+  children: 0,
+  limit: null,
 }
 
 export interface Stop {
@@ -52,6 +60,8 @@ export interface Skipped {
 export interface Plan {
   days: Day[]
   skipped: Skipped[]
+  /** how the spending limit shaped the plan, when one was set */
+  pricing?: { tries: number; weight: number; fits: boolean }
 }
 
 /** Where every day starts: a central Manama hotel. */
@@ -189,8 +199,35 @@ function reasonsFor(p: Place, prefs: Prefs, f: Fit, meal: Meal | undefined, suns
   return r
 }
 
-/** Greedy planner: at each step pick the stop with the best appeal after time, distance and meal rules. */
-export function buildPlan(prefs: Prefs): Plan {
+/**
+ * Plan the trip. With a spending limit, re-plan with a growing price penalty
+ * until the estimated (mid-point) total fits, or the penalty tops out.
+ */
+export function buildPlan(input: Prefs): Plan {
+  const prefs = { ...input, kids: input.kids || input.children > 0 }
+  const first = greedy(prefs, 0)
+  if (!prefs.limit) return first
+  const group = { adults: prefs.adults, children: prefs.children }
+  const mid = (p: Plan) => {
+    const t = total(tripCost(p, group))
+    return (t[0] + t[1]) / 2
+  }
+  if (mid(first) <= prefs.limit) return { ...first, pricing: { tries: 1, weight: 0, fits: true } }
+  // keep the cheapest attempt: a stronger penalty can free up time for an extra (paid) meal
+  let best = { plan: first, cost: mid(first), weight: 0 }
+  let tries = 1
+  for (const w of [0.5, 1, 2, 4]) {
+    tries++
+    const p = greedy(prefs, w)
+    const c = mid(p)
+    if (c < best.cost) best = { plan: p, cost: c, weight: w }
+    if (c <= prefs.limit) return { ...p, pricing: { tries, weight: w, fits: true } }
+  }
+  return { ...best.plan, pricing: { tries, weight: best.weight, fits: false } }
+}
+
+/** Greedy planner: at each step pick the stop with the best appeal after time, distance, meal and price rules. */
+function greedy(prefs: Prefs, priceWeight: number): Plan {
   const pace = PACE[prefs.pace]
   const used = new Set<string>()
   const days: Day[] = []
@@ -217,7 +254,9 @@ export function buildPlan(prefs: Prefs): Plan {
 
       let best: { p: Place; f: Fit; score: number; sunset: boolean } | null = null
       for (const p of PLACES) {
-        if (used.has(p.id)) continue
+        // on a spending limit, a cheap eatery from an earlier day may serve another meal
+        const today = stops.some((x) => x.placeId === p.id)
+        if (used.has(p.id) && !(due && priceWeight > 0 && !today)) continue
         if (!affordable(p, prefs.budget)) {
           rejected.set(p.id, 'over your budget')
           continue
@@ -236,6 +275,7 @@ export function buildPlan(prefs: Prefs): Plan {
         // keep places that double as restaurants for the meal they serve
         if (!due && prefs.meals && p.meals?.length) score -= 1.5
         if (sunset) score += 2.5
+        if (priceWeight) score -= priceWeight * midPerPerson(p, due)
         if (p.sunset && !sunset && p.outdoor && f.arrive >= toMin('11:30') && f.arrive <= toMin('15:00')) score -= 1.5
         if (!best || score > best.score) best = { p, f, score, sunset }
       }
@@ -266,7 +306,10 @@ export function buildPlan(prefs: Prefs): Plan {
         leave: best.f.leave,
         travel: best.f.travel,
         meal,
-        reasons: reasonsFor(best.p, prefs, best.f, meal, best.sunset, stops.length === 0),
+        reasons: [
+          ...reasonsFor(best.p, prefs, best.f, meal, best.sunset, stops.length === 0),
+          ...(priceWeight && midPerPerson(best.p, meal) < 3 ? ['A lower-cost choice, to fit your spending limit'] : []),
+        ],
         warnings: [],
       })
       now = best.f.leave + pace.buffer

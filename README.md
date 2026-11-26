@@ -14,6 +14,7 @@ Built with Claude for the Bahrain Polytechnic **AI Literacy** course (Week 9, Se
 | --- | --- | --- |
 | ![Mobile](docs/screenshots/mobile-trip.jpg) | ![Explanation panel](docs/screenshots/how-it-decided.jpg) | ![Reasons and swap](docs/screenshots/why-and-swap.jpg) |
 | ![Day cover photo](docs/screenshots/photo-day-cover.jpg) | ![Explore with photos](docs/screenshots/photo-explore.jpg) | ![Map popup with photo](docs/screenshots/photo-map-popup.jpg) |
+| ![Trip cost summary](docs/screenshots/cost-summary.jpg) | ![Over the spending limit](docs/screenshots/cost-limit-warning.jpg) | ![Checked prices in Explore](docs/screenshots/explore-prices-dark.jpg) |
 
 ## Features
 
@@ -24,6 +25,9 @@ Built with Claude for the Bahrain Polytechnic **AI Literacy** course (Week 9, Se
 - **Live map.** OpenStreetMap with numbered pins and a route line for each day. Clicking a pin or a stop flies the map to it.
 - **Explore 30 places.** Search and filter by interest. Each place has hours, typical visit length, entry cost, a local tip, its Arabic name and a directions link.
 - **Keep and share.** Save the trip on your device, copy a share link (the whole trip is encoded in the URL, with no account or server), add it to your calendar as an `.ics` file, or print it.
+- **Group size and spending estimates.** Set adults and children, here or in plain words ("2 adults and 3 kids", "family of 5"). Every stop shows an estimate such as *≈ BD 7.5–15 for 5 people, lunch*. Every day and the whole trip get a total, split into food, entry fees and activities. The figures use each place's real entry fees (adult and child), a typical meal spend per adult for that place and meal, and the cheapest common ticket for activities like karting. All of them are labelled as estimates.
+- **Spending limit.** Set an optional limit for the whole trip, or write "under 60 BD". Rihla re-plans with a growing penalty on cost per person until the estimate fits, and says how many times it re-planned. If even the cheapest plan is over, it tells you honestly, rather than hiding it.
+- **Checked data, with sources.** Every place records where its facts were checked and when. Facts that sources disagree on are marked approximate, and that label shows in the app. See [`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md).
 - **Real photos, credited.** 22 places show a freely licensed photo from Wikimedia Commons. It appears as the hero image in Explore, a cover for each day of the trip, thumbnails on stops, and in map popups. Every large photo carries an author, licence and source credit. The other 8 places get an illustrated tile with an eight-point star lattice in the colour of their category. Images are lazy-loaded and fall back to the illustration if one fails to load.
 - **Made for Bahrain.** Bilingual place names, the serrated edge from the Bahraini flag as the signature detail, light and dark themes, and a mobile layout with a full-screen map tab.
 
@@ -50,6 +54,16 @@ Built with Claude for the Bahrain Polytechnic **AI Literacy** course (Week 9, Se
 
 It runs entirely in the browser, with no API key or server. That keeps it free to host, fast, and private, and makes every decision traceable. This is a deliberate AI-literacy choice: the "intelligence" here is transparent rules over curated data, and the app says so.
 
+## Data check (26 November 2026)
+
+All 30 places were checked against official listings (Bahrain Authority for Culture & Antiquities, bahrain.com, the Pearling Path and Bahrain International Circuit sites), Wikipedia, and recent reviews. Map pins were cross-checked against OpenStreetMap and Wikipedia coordinates. What changed:
+
+- **Map pins moved**: Bahrain World Trade Center (it was 2.7 km off), Marassi Beach (3.2 km), Al Areen Wildlife Park (7 km), A'ali burial mounds (1.3 km), Beit Al Quran, Bahrain National Museum, Haji's Café, Saffron by Jena, Bahrain Bay, Amwaj Lagoon and the Circuit.
+- **Hours and closing days corrected**: National Museum (9 am–8 pm, closed Tuesdays); Pearling Path / Siyadi House (10 am–6 pm, closed Tuesdays); Bu Maher Fort (closed Tuesdays); Beit Al Quran (open Saturdays, mornings 9–12 plus 4–6 pm, closed Fridays); Barbar Temple (8 am–5 pm); Haji's Café (5:30 am–9 pm, now also lunch and dinner); Manama and Muharraq souqs (8:30 am–10 pm); A'ali pottery (closed Fridays); Shaikh Isa bin Ali House and Riffa Fort (shorter planning window, with a renovation notice).
+- **Prices replaced with real figures**: entry fees for adults and children (for example National Museum BD 1–2, Arad Fort BD 1, Al Areen BD 1, Marassi Beach BD 2–4); typical meal spend per place and meal; and karting at the Circuit at BD 14 plus BD 1 registration.
+- **Content fixed**: Riffa Fort's "terrace café" is the Saffron by Jena branch inside the fort; Arad Fort is no longer listed as free.
+- **Still approximate (shown as such in the app)**: café and restaurant spend, beach and wildlife-park prices, and opening hours where official sources conflict.
+
 ## Photos
 
 `scripts/fetch-images.mjs` runs once, ahead of time. It reads each place's Wikipedia lead image (or a hand-picked Commons file), keeps it only if the licence is free (CC BY, CC BY-SA, CC0, public domain), and writes the URL, author, licence and source page to `src/data/images.json`. The app never calls an API while you use it and needs no key, so nothing can leak from the public site. Re-run it with:
@@ -68,6 +82,7 @@ src/
   data/images.json      photo URL, author, licence and source per place (generated)
   lib/planner.ts        scoring, scheduling, re-timing, swap suggestions, explanations
   lib/parse.ts          plain-language request → settings, with evidence
+  lib/cost.ts           group size, per-stop, per-day and trip estimates
   lib/share.ts          save, share links, calendar export
   components/           PlanForm, TripView, Explore, MapView, small UI parts
 scripts/sample-plans.ts prints sample itineraries for checking planner changes
@@ -81,12 +96,14 @@ Requires Node.js 20 or newer.
 npm install
 npm run dev        # http://localhost:5173
 npm run build      # production build in dist/
-npm run sample     # print sample itineraries in the terminal
+npm run sample     # print sample itineraries and cost estimates
+npm run sources    # regenerate docs/DATA-SOURCES.md from the data
+npm run check      # check that a spending limit never makes a plan dearer
 ```
 
 ## Limits
 
-Opening hours and prices are approximate and were written for planning, not taken from an official source. Check with the venue before you go. Drive times ignore live traffic. The text parser uses keyword matching, so it shows exactly what it picked up, and anything it missed can be fixed in the settings.
+Opening hours and prices were checked on 26 November 2026, but they change. Where sources disagree, the app says so. Cost figures are estimates, not quotes: they leave out transport, shopping and tips. Drive times ignore live traffic. The text parser uses keyword matching, so it shows exactly what it picked up, and anything it missed can be fixed in the settings.
 
 ---
 

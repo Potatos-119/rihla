@@ -1,5 +1,6 @@
 import { PLACE_BY_ID } from '../data/places'
 import type { Plan, Prefs } from './planner'
+import { formatRange, peopleLabel, stopCost, total, type Group } from './cost'
 
 interface Saved {
   prefs: Prefs
@@ -60,7 +61,7 @@ export function loadFromHash(): Saved | null {
 }
 
 /** Calendar file for the trip, starting on the next date that falls on the chosen weekday. */
-export function toIcs(plan: Plan): string {
+export function toIcs(plan: Plan, group: Group): string {
   const today = new Date()
   const first = new Date(today)
   const offset = (plan.days[0].weekday - today.getDay() + 7) % 7 || 7
@@ -86,7 +87,7 @@ export function toIcs(plan: Plan): string {
         `SUMMARY:${p.name}`,
         `LOCATION:${p.name}\\, ${p.area}\\, Bahrain`,
         `GEO:${p.lat};${p.lng}`,
-        `DESCRIPTION:${p.tip.replace(/,/g, '\\,')}`,
+        `DESCRIPTION:${(`Estimated ${formatRange(total(stopCost(s, group)))} ${peopleLabel(group)}. ` + p.tip).replace(/,/g, '\\,')}`,
         'END:VEVENT',
       )
     })

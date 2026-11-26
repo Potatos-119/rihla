@@ -19,14 +19,16 @@ const INTEREST_WORDS: [Interest, RegExp][] = [
   ['crafts', /\b(crafts?|pottery|art|arts|artisans?|handmade|galler\w*|weaving)\b/i],
 ]
 
-const NUM: Record<string, number> = { one: 1, two: 2, three: 3, a: 1, single: 1 }
+const NUM: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, a: 1, single: 1 }
+const n = (w: string) => NUM[w] ?? Number(w)
+const COUNT = String.raw`(\d+|one|two|three|four|five|six|seven|eight)`
 
 export function parseRequest(text: string, base: Prefs): { prefs: Prefs; understood: Understood[] } {
   const prefs: Prefs = { ...base }
   const understood: Understood[] = []
   const t = text.toLowerCase()
 
-  const days = t.match(/\b(\d|one|two|three|a|single)[\s-]*(day|days|night|nights)\b/)
+  const days = t.match(/\b(\d|one|two|three|a|single)[\s-]*(?:(?:relaxed|full|busy|lazy|short|long|easy)\s+)?(day|days|night|nights)\b/)
   if (days) {
     const n = Math.min(3, Math.max(1, NUM[days[1]] ?? Number(days[1])))
     prefs.days = n
@@ -52,14 +54,50 @@ export function parseRequest(text: string, base: Prefs): { prefs: Prefs; underst
     if (m) {
       found.push(interest)
       understood.push({
-        label: interest === 'family' ? 'Travelling with kids' : `Interested in ${interest === 'sea' ? 'the sea' : interest}`,
+        label: interest === 'family' ? 'Family-friendly places' : `Interested in ${interest === 'sea' ? 'the sea' : interest}`,
         evidence: m[0],
       })
     }
   }
   if (found.length) prefs.interests = found.filter((i) => i !== 'family')
-  if (found.includes('family')) prefs.kids = true
   if (!prefs.interests.length) prefs.interests = base.interests
+
+  // who is going
+  const family = t.match(new RegExp(`family of ${COUNT}`))
+  const adults = t.match(new RegExp(String.raw`\b${COUNT}\s+(adults?|people|persons|of us|friends|grown-?ups)\b`))
+  const kids = t.match(new RegExp(String.raw`\b${COUNT}\s+(kids?|children|child|sons?|daughters?)\b`))
+  if (family) {
+    const total = Math.min(12, n(family[1]))
+    prefs.adults = Math.min(2, total)
+    prefs.children = Math.max(0, total - 2)
+    understood.push({ label: `${prefs.adults} adults, ${prefs.children} children`, evidence: family[0] })
+  } else {
+    if (adults) {
+      prefs.adults = Math.max(1, Math.min(12, n(adults[1])))
+      understood.push({ label: `${prefs.adults} ${prefs.adults === 1 ? 'adult' : 'adults'}`, evidence: adults[0] })
+    } else if (/\b(alone|solo|by myself|just me)\b/.test(t)) {
+      prefs.adults = 1
+      understood.push({ label: '1 adult', evidence: t.match(/\b(alone|solo|by myself|just me)\b/)![0] })
+    } else if (/\b(my wife|my husband|couple|my partner|the two of us)\b/.test(t)) {
+      prefs.adults = 2
+      understood.push({ label: '2 adults', evidence: t.match(/\b(my wife|my husband|couple|my partner|the two of us)\b/)![0] })
+    }
+    if (kids) {
+      prefs.children = Math.min(10, n(kids[1]))
+      understood.push({ label: `${prefs.children} ${prefs.children === 1 ? 'child' : 'children'}`, evidence: kids[0] })
+    } else if (found.includes('family') && prefs.children === 0) {
+      prefs.children = 1
+      understood.push({ label: '1 child (change the number below)', evidence: t.match(INTEREST_WORDS[5][1])![0] })
+    }
+  }
+  prefs.kids = prefs.children > 0
+
+  // spending limit
+  const money = t.match(/(\d+(?:\.\d+)?)\s*(bd|bhd|dinars?)\b/) ?? t.match(/\b(?:bd|bhd)\s*(\d+(?:\.\d+)?)/)
+  if (money) {
+    prefs.limit = Number(money[1])
+    understood.push({ label: `Spending limit BD ${prefs.limit}`, evidence: money[0] })
+  }
 
   if (/\b(free|no money|broke|zero budget)\b/.test(t)) {
     prefs.budget = 'free'
@@ -97,6 +135,6 @@ export function parseRequest(text: string, base: Prefs): { prefs: Prefs; underst
 
 export const EXAMPLES = [
   'Two days, I love history and seafood, student budget',
-  'One relaxed day with my kids, beaches and animals',
-  'Weekend of souqs, crafts and art, early start',
+  'One relaxed day, 2 adults and 3 kids, beaches and animals, under 60 BD',
+  'Weekend of souqs, crafts and art with my wife, early start',
 ]

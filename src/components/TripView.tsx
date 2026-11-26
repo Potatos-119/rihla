@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { AlertTriangle, ArrowDown, ArrowUp, CalendarPlus, Check, ChevronDown, Link2, Printer, Repeat2, Save, Trash2, X } from 'lucide-react'
 import { PLACES, PLACE_BY_ID } from '../data/places'
 import { BASE, WEEKDAYS, alternatives, fmt, interestLabel, zone, type Day, type Plan, type Prefs } from '../lib/planner'
-import { Arabic, Cost } from './bits'
+import { Arabic } from './bits'
+import { CostSummary, SourceLine } from './Costs'
+import { dayCost, formatRange, peopleLabel, stopCost, total, type Group } from '../lib/cost'
 import PlacePhoto from './Photo'
 import { PHOTOS } from '../data/photos'
 import { dayColor } from './MapView'
@@ -20,13 +22,16 @@ interface Props {
   onShare: () => Promise<void>
   onCalendar: () => void
   onReplan: () => void
+  onGroup: (g: Group) => void
+  onLimit: (limit: number | null) => void
+  onRefit: () => void
 }
 
 export default function TripView(props: Props) {
   const { plan, prefs, dark } = props
   const [saved, setSaved] = useState(false)
   const [copied, setCopied] = useState(false)
-  const total = plan.days.reduce((n, d) => n + d.stops.length, 0)
+  const stopCount = plan.days.reduce((n, d) => n + d.stops.length, 0)
   const free = plan.days.flatMap((d) => d.stops).filter((s) => PLACE_BY_ID[s.placeId].cost === 0).length
   const driving = plan.days.flatMap((d) => d.stops).reduce((n, s) => n + s.travel, 0)
 
@@ -37,7 +42,7 @@ export default function TripView(props: Props) {
           {plan.days.length === 1 ? 'Your day' : `Your ${plan.days.length} days`} in Bahrain
         </h2>
         <p className="muted mt-1">
-          {total} stops, {free} of them free, about {Math.round(driving / 6) / 10} hours on the road in total.
+          {stopCount} stops, {free} of them free, about {Math.round(driving / 6) / 10} hours on the road in total.
         </p>
         <div className="no-print mt-3 flex flex-wrap gap-2">
           <button
@@ -69,11 +74,13 @@ export default function TripView(props: Props) {
         </div>
       </header>
 
+      <CostSummary plan={plan} prefs={prefs} onGroup={props.onGroup} onLimit={props.onLimit} onRefit={props.onRefit} />
+
       <WhyPanel plan={plan} prefs={prefs} />
 
       {plan.days.map((day) => (
         <section key={day.index} aria-labelledby={`day-${day.index}`}>
-          <DayCover day={day} color={dayColor(day.index, dark)} />
+          <DayCover day={day} color={dayColor(day.index, dark)} spend={formatRange(total(dayCost(day, { adults: prefs.adults, children: prefs.children })))} />
 
           {day.stops.length === 0 ? (
             <p className="surface hairline rounded-xl border border-dashed p-4 text-sm">
@@ -125,9 +132,8 @@ function StopCard({ plan, prefs, dayIndex, index, last, focusId, onFocus, onMove
               <span className="font-display block text-[1.05rem] leading-snug font-semibold">{p.name}</span>
               <Arabic className="muted block text-left text-[0.8rem] leading-relaxed">{p.arabic}</Arabic>
             </button>
-            <p className="muted mt-0.5 text-sm">
-              {p.area}, <Cost cost={p.cost} />
-            </p>
+            <p className="muted mt-0.5 text-sm">{p.area}</p>
+            <StopPrice stop={stop} prefs={prefs} />
           </div>
           <div className="no-print flex flex-col items-center">
             <button className="icon-btn" onClick={() => onMove(dayIndex, index, -1)} disabled={index === 0} aria-label="Move earlier">
@@ -138,6 +144,12 @@ function StopCard({ plan, prefs, dayIndex, index, last, focusId, onFocus, onMove
             </button>
           </div>
         </div>
+
+        {p.notice && (
+          <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-sand/60 px-2 py-1 text-sm dark:bg-sand/10">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0" /> {p.notice}
+          </p>
+        )}
 
         {stop.warnings.map((w) => (
           <p key={w} className="mt-2 flex items-center gap-1.5 rounded-lg bg-bh-soft px-2 py-1 text-sm text-bh">
@@ -167,6 +179,9 @@ function StopCard({ plan, prefs, dayIndex, index, last, focusId, onFocus, onMove
               ))}
             </ul>
             <p className="rounded-lg bg-[var(--surface-2)] p-2">{p.tip}</p>
+            {p.priceNote && <p className="muted">Price note: {p.priceNote}.</p>}
+            {p.hoursNote && <p className="muted">Hours: {p.hoursNote}.</p>}
+            <SourceLine place={p} />
           </div>
         )}
 
@@ -207,9 +222,29 @@ function StopCard({ plan, prefs, dayIndex, index, last, focusId, onFocus, onMove
   )
 }
 
+function StopPrice({ stop, prefs }: { stop: Plan['days'][number]['stops'][number]; prefs: Prefs }) {
+  const g = { adults: prefs.adults, children: prefs.children }
+  const b = stopCost(stop, g)
+  const t = total(b)
+  const p = PLACE_BY_ID[stop.placeId]
+  const what = [b.food[1] ? (stop.meal ?? 'food') : '', b.entry[1] ? 'entry' : '', b.other[1] && p.extra ? p.extra.label : ''].filter(Boolean).join(' + ')
+  return (
+    <p className="mt-1 text-sm">
+      {t[1] === 0 ? (
+        <span className="rounded-md bg-lagoon-2 px-1.5 py-0.5 text-xs font-semibold text-gulf-900">Free</span>
+      ) : (
+        <span className="tabular-nums">
+          <span className="font-semibold">≈ {formatRange(t)}</span> <span className="muted">{peopleLabel(g)}{what ? `, ${what}` : ''}</span>
+        </span>
+      )}
+      {p.approx?.includes('price') && t[1] > 0 && <span className="muted"> (estimate)</span>}
+    </p>
+  )
+}
+
 const ZONE_NAME: Record<string, string> = { Manama: 'Manama', Muharraq: 'Muharraq', West: 'the northwest coast', South: 'the south' }
 
-function DayCover({ day, color }: { day: Day; color: string }) {
+function DayCover({ day, color, spend }: { day: Day; color: string; spend: string }) {
   const zones = [...new Set(day.stops.map((s) => ZONE_NAME[zone(PLACE_BY_ID[s.placeId])]))]
   const where = zones.length ? zones.slice(0, -1).join(', ') + (zones.length > 1 ? ' and ' : '') + zones[zones.length - 1] : ''
   const star = day.stops
@@ -235,6 +270,7 @@ function DayCover({ day, color }: { day: Day; color: string }) {
           {WEEKDAYS[day.weekday]}
           {where ? ` around ${where}` : ''}, from {BASE.name}
         </p>
+        <p className="mt-0.5 text-sm font-semibold text-pearl">Day estimate ≈ {spend}</p>
       </div>
     </div>
   )
@@ -272,6 +308,9 @@ function WhyPanel({ plan, prefs }: { plan: Plan; prefs: Prefs }) {
               <li>Reserve breakfast, lunch and dinner slots for food places.</li>
               <li>Give outdoor sunset spots a bonus between 4 and 6 pm.</li>
               <li>Pick the highest score, move the clock on, and repeat until the day is full.</li>
+              {prefs.limit !== null && (
+                <li>With a spending limit, re-plan with a growing penalty on each place's cost per person until the estimate fits.</li>
+              )}
             </ol>
           </div>
           {plan.skipped.length > 0 && (
@@ -290,7 +329,7 @@ function WhyPanel({ plan, prefs }: { plan: Plan; prefs: Prefs }) {
             <p className="font-semibold">What it can’t know</p>
             <ul className="list-disc space-y-0.5 pl-5 text-pearl/80">
               <li>Live traffic, weather, or prayer-time pauses. Drive times are estimates from straight-line distance.</li>
-              <li>Today’s exact opening hours, holidays and events. Check before you go.</li>
+              <li>Today’s exact opening hours, prices, holidays and events. Each place shows when it was last checked; check again before you go.</li>
               <li>Your mood. If a stop looks wrong to you, swap or remove it; the plan re-times itself.</li>
             </ul>
           </div>

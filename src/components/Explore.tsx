@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react'
 import { BookOpen, Clock, MapPin, Plus, Search, X } from 'lucide-react'
 import { INTERESTS, PLACES, PLACE_BY_ID, type Interest } from '../data/places'
 import { WEEKDAYS, fmt, toMin, type Plan } from '../lib/planner'
-import { Arabic, Cost, ICON } from './bits'
+import { Arabic, ICON } from './bits'
+import { SourceLine } from './Costs'
+import { formatRange } from '../lib/cost'
 import PlacePhoto from './Photo'
 import { PHOTOS } from '../data/photos'
 
@@ -35,6 +37,7 @@ export default function Explore({ plan, selected, onSelect, onAdd }: Props) {
           </div>
         </div>
         <p className="max-w-[60ch] text-[1.02rem]">{p.blurb}</p>
+        {p.notice && <p className="rounded-xl bg-bh-soft p-3 text-sm text-bh">{p.notice}</p>}
         <dl className="surface hairline grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 rounded-2xl border p-4 text-sm">
           <dt className="muted flex items-center gap-1.5"><MapPin size={14} /> Area</dt>
           <dd>{p.area}</dd>
@@ -42,11 +45,37 @@ export default function Explore({ plan, selected, onSelect, onAdd }: Props) {
           <dd>
             {p.open === '00:00' && p.close === '23:59' ? 'Open all day' : `${fmt(toMin(p.open))} to ${fmt(toMin(p.close))}`}
             {p.closedDays?.length ? `, closed ${p.closedDays.map((d) => WEEKDAYS[d]).join(' and ')}` : ''}
+            {p.hoursNote ? `. ${p.hoursNote}` : ''}
+            {p.approx?.includes('hours') ? ' (approximate)' : ''}
           </dd>
           <dt className="muted">Typical visit</dt>
           <dd>{p.minutes} minutes</dd>
           <dt className="muted">Entry</dt>
-          <dd><Cost cost={p.cost} /></dd>
+          <dd>
+            {p.entry && p.entry.adult[1] > 0
+              ? `Adults ${formatRange(p.entry.adult)}, children ${formatRange(p.entry.child)}`
+              : 'Free'}
+            {p.approx?.includes('price') && p.entry ? ' (estimate)' : ''}
+          </dd>
+          {p.spend && (
+            <>
+              <dt className="muted">Typical spend</dt>
+              <dd>
+                {Object.entries(p.spend)
+                  .map(([meal, r]) => `${meal[0].toUpperCase() + meal.slice(1)} ${formatRange(r!)}`)
+                  .join(', ')}{' '}
+                per adult (estimate)
+              </dd>
+            </>
+          )}
+          {p.extra && (
+            <>
+              <dt className="muted">Activity</dt>
+              <dd>
+                {p.extra.label}, {formatRange(p.extra.adult)} per person
+              </dd>
+            </>
+          )}
         </dl>
         <p className="rounded-xl bg-sand/60 p-3 text-sm dark:bg-sand/10">
           <span className="font-semibold">Local tip. </span>
@@ -75,7 +104,8 @@ export default function Explore({ plan, selected, onSelect, onAdd }: Props) {
             </a>
           )}
         </div>
-        <p className="muted text-xs">Hours and prices are approximate. Check with the venue before you visit.</p>
+        {p.priceNote && <p className="muted text-sm">Price note: {p.priceNote}.</p>}
+        <SourceLine place={p} />
       </article>
     )
   }

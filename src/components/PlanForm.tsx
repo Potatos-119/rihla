@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { Baby, Sparkles, UtensilsCrossed, Wand2 } from 'lucide-react'
+import { Sparkles, UtensilsCrossed, Wand2 } from 'lucide-react'
 import { INTERESTS } from '../data/places'
 import { EXAMPLES, parseRequest, type Understood } from '../lib/parse'
 import { WEEKDAYS, type Prefs } from '../lib/planner'
-import { ICON } from './bits'
+import { ICON, Stepper } from './bits'
 
 interface Props {
   prefs: Prefs
@@ -138,6 +138,15 @@ export default function PlanForm({ prefs, setPrefs, onPlan }: Props) {
           </Field>
         </div>
 
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Adults">
+            <Stepper label="Adults" value={prefs.adults} min={1} max={12} onChange={(v) => set('adults', v)} />
+          </Field>
+          <Field label="Children">
+            <Stepper label="Children" value={prefs.children} min={0} max={10} onChange={(v) => setPrefs({ ...prefs, children: v, kids: v > 0 })} />
+          </Field>
+        </div>
+
         <Field label="Pace">
           <div className="seg">
             {(['relaxed', 'balanced', 'packed'] as const).map((p) => (
@@ -148,9 +157,27 @@ export default function PlanForm({ prefs, setPrefs, onPlan }: Props) {
           </div>
         </Field>
 
-        <Field label="Budget for entry fees">
+        <Field label="Spending limit for the whole trip (optional)">
+          <label className="surface hairline flex items-center gap-2 rounded-[10px] border px-3 py-[0.35rem] text-sm focus-within:border-lagoon focus-within:ring-2 focus-within:ring-lagoon/30">
+            <span className="muted">BD</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step={5}
+              placeholder="No limit"
+              value={prefs.limit ?? ''}
+              onChange={(e) => set('limit', e.target.value === '' ? null : Math.max(0, Number(e.target.value)))}
+              className="w-full bg-transparent outline-none focus-visible:outline-none"
+              aria-label="Spending limit in Bahraini dinars"
+            />
+          </label>
+          <p className="muted mt-1 text-xs">Covers food, entry fees and activities for everyone. Rihla picks cheaper options to stay under it.</p>
+        </Field>
+
+        <Field label="Entry fees">
           <div className="seg">
-            {([['free', 'Free only'], ['low', 'Low'], ['any', 'Any']] as const).map(([v, l]) => (
+            {([['free', 'Free only'], ['low', 'Up to BD 3'], ['any', 'Any']] as const).map(([v, l]) => (
               <button key={v} type="button" aria-pressed={prefs.budget === v} onClick={() => set('budget', v)}>
                 {l}
               </button>
@@ -168,9 +195,6 @@ export default function PlanForm({ prefs, setPrefs, onPlan }: Props) {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="chip" aria-pressed={prefs.kids} onClick={() => set('kids', !prefs.kids)}>
-            <Baby size={14} /> Travelling with kids
-          </button>
           <button type="button" className="chip" aria-pressed={prefs.meals} onClick={() => set('meals', !prefs.meals)}>
             <UtensilsCrossed size={14} /> Plan meal stops
           </button>

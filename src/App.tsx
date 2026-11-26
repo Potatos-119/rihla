@@ -158,8 +158,14 @@ export default function App() {
                   window.prompt('Copy this link', url)
                 }
               }}
-              onCalendar={() => download('rihla-bahrain-trip.ics', toIcs(plan), 'text/calendar')}
+              onCalendar={() => download('rihla-bahrain-trip.ics', toIcs(plan, { adults: prefs.adults, children: prefs.children }), 'text/calendar')}
               onReplan={() => setTab('plan')}
+              onGroup={(g) => setPrefs({ ...prefs, ...g, kids: prefs.kids || g.children > 0 })}
+              onLimit={(limit) => setPrefs({ ...prefs, limit })}
+              onRefit={() => {
+                setPlan(buildPlan(prefs))
+                setNotice('Re-planned with cheaper options. Your manual edits were replaced.')
+              }}
             />
           )}
           {tab === 'explore' && (
