@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Compass, ListOrdered, Map as MapIcon, Moon, SlidersHorizontal, Sun } from 'lucide-react'
 import PlanForm from './components/PlanForm'
 import TripView from './components/TripView'
@@ -45,6 +45,11 @@ export default function App() {
     document.documentElement.classList.toggle('dark', dark)
     localStorage.setItem('rihla.theme', dark ? 'dark' : 'light')
   }, [dark])
+
+  const mainRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 })
+  }, [tab, selected])
 
   useEffect(() => {
     if (!notice) return
@@ -122,7 +127,7 @@ export default function App() {
           </p>
         )}
 
-        <main className={`scroll-thin min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-5 ${tab === 'map' ? 'hidden lg:block' : ''}`}>
+        <main ref={mainRef} className={`scroll-thin min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-5 ${tab === 'map' ? 'hidden lg:block' : ''}`}>
           {tab === 'plan' && <PlanForm prefs={prefs} setPrefs={setPrefs} onPlan={makePlan} />}
           {tab === 'trip' && plan && (
             <TripView

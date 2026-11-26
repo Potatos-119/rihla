@@ -13,6 +13,7 @@ Built with Claude for the Bahrain Polytechnic **AI Literacy** course (Week 9, Se
 | Phone | How it decided | Why this stop and Swap |
 | --- | --- | --- |
 | ![Mobile](docs/screenshots/mobile-trip.jpg) | ![Explanation panel](docs/screenshots/how-it-decided.jpg) | ![Reasons and swap](docs/screenshots/why-and-swap.jpg) |
+| ![Day cover photo](docs/screenshots/photo-day-cover.jpg) | ![Explore with photos](docs/screenshots/photo-explore.jpg) | ![Map popup with photo](docs/screenshots/photo-map-popup.jpg) |
 
 ## Features
 
@@ -23,6 +24,7 @@ Built with Claude for the Bahrain Polytechnic **AI Literacy** course (Week 9, Se
 - **Live map.** OpenStreetMap with numbered pins and a route line for each day. Clicking a pin or a stop flies the map to it.
 - **Explore 30 places.** Search and filter by interest. Each place has hours, typical visit length, entry cost, a local tip, its Arabic name and a directions link.
 - **Keep and share.** Save the trip on your device, copy a share link (the whole trip is encoded in the URL, with no account or server), add it to your calendar as an `.ics` file, or print it.
+- **Real photos, credited.** 22 places show a freely licensed photo from Wikimedia Commons. It appears as the hero image in Explore, a cover for each day of the trip, thumbnails on stops, and in map popups. Every large photo carries an author, licence and source credit. The other 8 places get an illustrated tile with an eight-point star lattice in the colour of their category. Images are lazy-loaded and fall back to the illustration if one fails to load.
 - **Made for Bahrain.** Bilingual place names, the serrated edge from the Bahraini flag as the signature detail, light and dark themes, and a mobile layout with a full-screen map tab.
 
 ## How it meets the brief
@@ -48,6 +50,14 @@ Built with Claude for the Bahrain Polytechnic **AI Literacy** course (Week 9, Se
 
 It runs entirely in the browser, with no API key or server. That keeps it free to host, fast, and private, and makes every decision traceable. This is a deliberate AI-literacy choice: the "intelligence" here is transparent rules over curated data, and the app says so.
 
+## Photos
+
+`scripts/fetch-images.mjs` runs once, ahead of time. It reads each place's Wikipedia lead image (or a hand-picked Commons file), keeps it only if the licence is free (CC BY, CC BY-SA, CC0, public domain), and writes the URL, author, licence and source page to `src/data/images.json`. The app never calls an API while you use it and needs no key, so nothing can leak from the public site. Re-run it with:
+
+```bash
+node scripts/fetch-images.mjs
+```
+
 ## Tech
 
 React 19 · TypeScript · Vite · Tailwind CSS v4 · Leaflet / react-leaflet with OpenStreetMap tiles · lucide icons · self-hosted fonts (Bricolage Grotesque, Instrument Sans, Reem Kufi).
@@ -55,6 +65,7 @@ React 19 · TypeScript · Vite · Tailwind CSS v4 · Leaflet / react-leaflet wit
 ```
 src/
   data/places.ts        30 curated places: coordinates, hours, cost, tags, tips, Arabic names
+  data/images.json      photo URL, author, licence and source per place (generated)
   lib/planner.ts        scoring, scheduling, re-timing, swap suggestions, explanations
   lib/parse.ts          plain-language request → settings, with evidence
   lib/share.ts          save, share links, calendar export
@@ -79,4 +90,4 @@ Opening hours and prices are approximate and were written for planning, not take
 
 ---
 
-Map data © OpenStreetMap contributors. Made by a Bahrain Polytechnic student with Claude.
+Map data © OpenStreetMap contributors. Photos from Wikimedia Commons; each photo's author and licence are shown on the photo in the app and stored in `src/data/images.json`. Made by a Bahrain Polytechnic student with Claude.

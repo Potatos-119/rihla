@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
-import { Clock, MapPin, Plus, Search, X } from 'lucide-react'
+import { BookOpen, Clock, MapPin, Plus, Search, X } from 'lucide-react'
 import { INTERESTS, PLACES, PLACE_BY_ID, type Interest } from '../data/places'
 import { WEEKDAYS, fmt, toMin, type Plan } from '../lib/planner'
-import { Arabic, Cost, ICON, PlaceBadge } from './bits'
+import { Arabic, Cost, ICON } from './bits'
+import PlacePhoto from './Photo'
+import { PHOTOS } from '../data/photos'
 
 interface Props {
   plan: Plan | null
@@ -25,8 +27,8 @@ export default function Explore({ plan, selected, onSelect, onAdd }: Props) {
         <button className="btn-ghost" onClick={() => onSelect(null)}>
           <X size={15} /> Back to all places
         </button>
-        <div className="flex items-start gap-3">
-          <PlaceBadge place={p} size={52} />
+        <PlacePhoto place={p} variant="hero" className="aspect-[16/9] w-full rounded-2xl" />
+        <div>
           <div>
             <h2 className="font-display text-2xl leading-tight font-semibold tracking-tight">{p.name}</h2>
             <Arabic className="muted text-lg">{p.arabic}</Arabic>
@@ -67,6 +69,11 @@ export default function Explore({ plan, selected, onSelect, onAdd }: Props) {
           <a className="btn-ghost" href={`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`} target="_blank" rel="noreferrer">
             <MapPin size={15} /> Directions
           </a>
+          {PHOTOS[p.id]?.article && (
+            <a className="btn-ghost" href={PHOTOS[p.id].article!} target="_blank" rel="noreferrer">
+              <BookOpen size={15} /> Read on Wikipedia
+            </a>
+          )}
         </div>
         <p className="muted text-xs">Hours and prices are approximate. Check with the venue before you visit.</p>
       </article>
@@ -95,11 +102,11 @@ export default function Explore({ plan, selected, onSelect, onAdd }: Props) {
       {list.length === 0 ? (
         <p className="muted py-6 text-center">No places match “{q}”. Try a different word or clear the filter.</p>
       ) : (
-        <ul className="divide-y hairline">
+        <ul className="divide-y divide-[var(--line)]">
           {list.map((p) => (
             <li key={p.id}>
               <button className="flex w-full items-center gap-3 py-2.5 text-left" onClick={() => onSelect(p.id)}>
-                <PlaceBadge place={p} />
+                <PlacePhoto place={p} className="h-14 w-14 shrink-0 rounded-xl" />
                 <span className="min-w-0 flex-1">
                   <span className="block font-semibold">{p.name}</span>
                   <span className="muted block truncate text-sm">{p.area}, {p.blurb}</span>

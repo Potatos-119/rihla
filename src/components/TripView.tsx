@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { AlertTriangle, ArrowDown, ArrowUp, CalendarPlus, Check, ChevronDown, Link2, Printer, Repeat2, Save, Trash2, X } from 'lucide-react'
 import { PLACES, PLACE_BY_ID } from '../data/places'
-import { BASE, WEEKDAYS, alternatives, fmt, interestLabel, type Plan, type Prefs } from '../lib/planner'
-import { Arabic, Cost, PlaceBadge } from './bits'
+import { BASE, WEEKDAYS, alternatives, fmt, interestLabel, zone, type Day, type Plan, type Prefs } from '../lib/planner'
+import { Arabic, Cost } from './bits'
+import PlacePhoto from './Photo'
+import { PHOTOS } from '../data/photos'
 import { dayColor } from './MapView'
 
 interface Props {
@@ -71,13 +73,7 @@ export default function TripView(props: Props) {
 
       {plan.days.map((day) => (
         <section key={day.index} aria-labelledby={`day-${day.index}`}>
-          <div className="mb-2 flex items-baseline gap-2">
-            <span className="h-2.5 w-2.5 translate-y-[-1px] rounded-full" style={{ background: dayColor(day.index, dark) }} aria-hidden />
-            <h3 id={`day-${day.index}`} className="font-display text-lg font-semibold">
-              Day {day.index + 1}
-            </h3>
-            <span className="muted text-sm">{WEEKDAYS[day.weekday]}, from {BASE.name}</span>
-          </div>
+          <DayCover day={day} color={dayColor(day.index, dark)} />
 
           {day.stops.length === 0 ? (
             <p className="surface hairline rounded-xl border border-dashed p-4 text-sm">
@@ -117,8 +113,8 @@ function StopCard({ plan, prefs, dayIndex, index, last, focusId, onFocus, onMove
       />
       <div className={`surface rounded-2xl border p-3 transition-colors ${active ? 'border-bh/60' : 'hairline'}`}>
         <div className="flex gap-3">
-          <button className="text-left" onClick={() => onFocus(p.id)} aria-label={`Show ${p.name} on the map`}>
-            <PlaceBadge place={p} />
+          <button className="shrink-0 self-start text-left" onClick={() => onFocus(p.id)} aria-label={`Show ${p.name} on the map`}>
+            <PlacePhoto place={p} className="h-14 w-14 rounded-xl" />
           </button>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold tabular-nums">
@@ -189,7 +185,7 @@ function StopCard({ plan, prefs, dayIndex, index, last, focusId, onFocus, onMove
                           setSwapping(false)
                         }}
                       >
-                        <PlaceBadge place={a} size={28} />
+                        <PlacePhoto place={a} className="h-9 w-9 shrink-0 rounded-lg" />
                         <span className="flex-1">
                           {a.name} <span className="muted">{a.tags.slice(0, 2).map(interestLabel).join(', ')}</span>
                         </span>
@@ -208,6 +204,39 @@ function StopCard({ plan, prefs, dayIndex, index, last, focusId, onFocus, onMove
         )}
       </div>
     </li>
+  )
+}
+
+const ZONE_NAME: Record<string, string> = { Manama: 'Manama', Muharraq: 'Muharraq', West: 'the northwest coast', South: 'the south' }
+
+function DayCover({ day, color }: { day: Day; color: string }) {
+  const zones = [...new Set(day.stops.map((s) => ZONE_NAME[zone(PLACE_BY_ID[s.placeId])]))]
+  const where = zones.length ? zones.slice(0, -1).join(', ') + (zones.length > 1 ? ' and ' : '') + zones[zones.length - 1] : ''
+  const star = day.stops
+    .map((s) => PLACE_BY_ID[s.placeId])
+    .filter((p) => PHOTOS[p.id] && PHOTOS[p.id].width >= PHOTOS[p.id].height)
+    .sort((a, b) => b.rating - a.rating)[0]
+  return (
+    <div className="relative mb-3 overflow-hidden rounded-2xl">
+      {star ? (
+        <PlacePhoto place={star} variant="cover" className="aspect-[5/2] w-full" />
+      ) : (
+        <div className="aspect-[5/2] w-full" style={{ background: color }} />
+      )}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-gulf-950/85 via-gulf-950/25 to-transparent" />
+      <div className="pointer-events-none absolute bottom-0 left-0 p-3.5 pb-5 text-pearl">
+        <div className="flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full ring-2 ring-white/70" style={{ background: color }} aria-hidden />
+          <h3 id={`day-${day.index}`} className="font-display text-xl leading-none font-semibold">
+            Day {day.index + 1}
+          </h3>
+        </div>
+        <p className="mt-1 text-sm text-pearl/85">
+          {WEEKDAYS[day.weekday]}
+          {where ? ` around ${where}` : ''}, from {BASE.name}
+        </p>
+      </div>
+    </div>
   )
 }
 

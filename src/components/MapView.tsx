@@ -1,7 +1,8 @@
-import { Fragment, useEffect, useMemo } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { MapContainer, Marker, Polyline, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { PLACES, PLACE_BY_ID } from '../data/places'
+import { PHOTOS } from '../data/photos'
 import { BASE, fmt, type Plan } from '../lib/planner'
 
 export const DAY_COLORS = ['#0f3b45', '#2a8c82', '#b07a2a']
@@ -33,16 +34,49 @@ const home = L.divIcon({
   iconAnchor: [11, 11],
 })
 
+function PopupBody({ id, line }: { id: string; line: string }) {
+  const p = PLACE_BY_ID[id]
+  const photo = PHOTOS[id]
+  return (
+    <div className="w-[220px]">
+      {photo && (
+        <img src={photo.thumb} alt={p.name} loading="lazy" className="mb-2 aspect-[16/10] w-full rounded-lg object-cover" />
+      )}
+      <strong className="block text-[14px]">{p.name}</strong>
+      <span className="block">{line}</span>
+      {photo && (
+        <a href={photo.page} target="_blank" rel="noreferrer" className="mt-1 block truncate text-[10.5px] !text-[#5a6f74]">
+          Photo: {photo.author}, {photo.licence}
+        </a>
+      )}
+    </div>
+  )
+}
+
 function Fit({ plan, focusId }: { plan: Plan | null; focusId: string | null }) {
   const map = useMap()
+  // bumps whenever the map goes from hidden (0×0, e.g. another tab on a phone) to visible
+  const [shown, setShown] = useState(0)
   useEffect(() => {
-    const ro = new ResizeObserver(() => map.invalidateSize())
+    let visible = false
+    const ro = new ResizeObserver(() => {
+      const el = map.getContainer()
+      const now = el.clientWidth > 0 && el.clientHeight > 0
+      if (now) map.invalidateSize({ animate: false })
+      else map.stop() // cancel a fly-to if the map is hidden mid-animation
+      if (now && !visible) setShown((n) => n + 1)
+      visible = now
+    })
     ro.observe(map.getContainer())
     return () => ro.disconnect()
   }, [map])
   useEffect(() => {
+    const el = map.getContainer()
+    // animating a hidden map makes Leaflet compute NaN coordinates, so wait until it is visible
+    if (el.clientWidth === 0 || el.clientHeight === 0) return
     const t = setTimeout(() => {
-      map.invalidateSize()
+      map.invalidateSize({ animate: false })
+      map.stop()
       if (focusId) {
         const p = PLACE_BY_ID[focusId]
         map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 13), { duration: 0.8 })
@@ -52,7 +86,7 @@ function Fit({ plan, focusId }: { plan: Plan | null; focusId: string | null }) {
       if (pts.length) map.fitBounds(L.latLngBounds(pts.map((p) => [p.lat, p.lng])).pad(0.15), { maxZoom: 13 })
     }, 60)
     return () => clearTimeout(t)
-  }, [plan, focusId, map])
+  }, [plan, focusId, map, shown])
   return null
 }
 
@@ -88,10 +122,8 @@ export default function MapView({ plan, focusId, dark, onSelect }: Props) {
               const p = PLACE_BY_ID[s.placeId]
               return (
                 <Marker key={s.placeId} position={[p.lat, p.lng]} icon={pin(i + 1, color, focusId === p.id)} eventHandlers={{ click: () => onSelect(p.id) }} zIndexOffset={focusId === p.id ? 1000 : 100}>
-                  <Popup>
-                    <strong>{p.name}</strong>
-                    <br />
-                    Day {day.index + 1}, {fmt(s.arrive)}–{fmt(s.leave)}
+                  <Popup minWidth={220} maxWidth={240}>
+                    <PopupBody id={p.id} line={`Day ${day.index + 1}, ${fmt(s.arrive)}–${fmt(s.leave)}`} />
                   </Popup>
                 </Marker>
               )
