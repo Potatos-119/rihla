@@ -16,7 +16,7 @@ Map positions were cross-checked against OpenStreetMap (Nominatim) and Wikipedia
 | Al Fateh Grand Mosque | 26.2192, 50.5964 | 9 am–4 pm, closed Fri | Free | – | [culture.gov.bh](https://culture.gov.bh/en/visitingbahrain/CulturalTourism/Destinations/Name,10534,en.php) | 2026-11-26 |
 | Beit Al Quran | 26.2398, 50.5916 | 9 am–12 pm, closed Fri | Free | – | [en.wikipedia.org](https://en.wikipedia.org/wiki/Beit_Al_Quran) | 2026-11-26 |
 | Pearling Path · Siyadi House | 26.2552, 50.6119 | 10 am–6 pm, closed Tue | Free | – | [pearlingpath.bh](https://pearlingpath.bh/en/visitor-information) | 2026-11-26 |
-| Shaikh Isa bin Ali House | 26.2478, 50.6132 | 9 am–2 pm, closed Fri | Entry: adult BD 0–0.5, child BD 0 | price, hours | [culture.gov.bh](https://culture.gov.bh/en/visitingbahrain/CulturalTourism/Destinations/Name,10133,en.php) | 2026-11-26 |
+| Shaikh Isa bin Ali House | 26.2478, 50.6132 | 9 am–2 pm | Entry: adult BD 0–0.5, child BD 0 | price, hours | [culture.gov.bh](https://culture.gov.bh/en/visitingbahrain/CulturalTourism/Destinations/Name,10133,en.php) | 2026-11-26 |
 | Muharraq Souq | 26.2571, 50.6098 | 8:30 am–10 pm | lunch BD 2–5 pp, dinner BD 2–5 pp | price | [bahrain.com](https://www.bahrain.com/en/souq-al-qaisariya) | 2026-11-26 |
 | Saffron by Jena | 26.2500, 50.6103 | 8 am–7 pm | breakfast BD 4–7 pp, lunch BD 5–9 pp | price, hours | [wanderlog.com](https://wanderlog.com/place/details/1277629/saffron-by-jenna) | 2026-11-26 |
 | Bu Maher Fort | 26.2398, 50.6158 | 9 am–6 pm, closed Tue | Free | – | [culture.gov.bh](https://culture.gov.bh/en/visitingbahrain/CulturalTourism/Destinations/Name,10878,en.php) | 2026-11-26 |

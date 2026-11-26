@@ -2,13 +2,18 @@ import { useState } from 'react'
 import { Sparkles, UtensilsCrossed, Wand2 } from 'lucide-react'
 import { INTERESTS } from '../data/places'
 import { EXAMPLES, parseRequest, type Understood } from '../lib/parse'
-import { WEEKDAYS, type Prefs } from '../lib/planner'
+import { WEEKDAYS, fmt, sunsetMinutes, weekdayOf, type Prefs } from '../lib/planner'
 import { ICON, Stepper } from './bits'
 
 interface Props {
   prefs: Prefs
   setPrefs: (p: Prefs) => void
   onPlan: (p: Prefs) => void
+}
+
+export function todayIso(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 export default function PlanForm({ prefs, setPrefs, onPlan }: Props) {
@@ -125,16 +130,17 @@ export default function PlanForm({ prefs, setPrefs, onPlan }: Props) {
               ))}
             </div>
           </Field>
-          <Field label="First day">
-            <select
-              value={prefs.weekday}
-              onChange={(e) => set('weekday', Number(e.target.value))}
-              className="surface hairline w-full rounded-[10px] border px-2.5 py-[0.42rem] text-sm"
-            >
-              {WEEKDAYS.map((d, i) => (
-                <option key={d} value={i}>{d}</option>
-              ))}
-            </select>
+          <Field label="Start date">
+            <input
+              type="date"
+              value={prefs.date ?? ''}
+              min={todayIso()}
+              onChange={(e) =>
+                setPrefs({ ...prefs, date: e.target.value || null, weekday: e.target.value ? weekdayOf(e.target.value) : prefs.weekday })
+              }
+              className="surface hairline w-full rounded-[10px] border px-2.5 py-[0.35rem] text-sm"
+            />
+            <p className="muted mt-1 text-xs">{prefs.date ? `${WEEKDAYS[weekdayOf(prefs.date)]}, sunset ${fmt(sunsetMinutes(prefs.date))}` : 'Pick a date for exact hours and calendar events'}</p>
           </Field>
         </div>
 

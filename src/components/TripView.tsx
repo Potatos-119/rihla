@@ -1,9 +1,11 @@
-import { useState } from 'react'
-import { AlertTriangle, ArrowDown, ArrowUp, CalendarPlus, Check, ChevronDown, Link2, Printer, Repeat2, Save, Trash2, X } from 'lucide-react'
+import { Fragment, useState } from 'react'
+import { Car, Coffee, Footprints, UtensilsCrossed, AlertTriangle, ArrowDown, ArrowUp, Check, ChevronDown, Link2, Printer, Repeat2, Save, Trash2, X } from 'lucide-react'
 import { PLACES, PLACE_BY_ID } from '../data/places'
-import { BASE, WEEKDAYS, alternatives, fmt, interestLabel, zone, type Day, type Plan, type Prefs } from '../lib/planner'
+import { BASE, WEEKDAYS, alternatives, fmt, hoursOn, interestLabel, zone, type Day, type Plan, type Prefs } from '../lib/planner'
+import { legStart, mapsDirections } from '../lib/links'
 import { Arabic } from './bits'
 import { CostSummary, SourceLine } from './Costs'
+import CalendarMenu from './CalendarMenu'
 import { dayCost, formatRange, peopleLabel, stopCost, total, type Group } from '../lib/cost'
 import PlacePhoto from './Photo'
 import { PHOTOS } from '../data/photos'
@@ -66,9 +68,7 @@ export default function TripView(props: Props) {
           >
             {copied ? <Check size={15} /> : <Link2 size={15} />} {copied ? 'Link copied' : 'Copy share link'}
           </button>
-          <button className="btn-ghost" onClick={props.onCalendar}>
-            <CalendarPlus size={15} /> Add to calendar
-          </button>
+          <CalendarMenu plan={plan} prefs={prefs} />
           <button className="btn-ghost" onClick={() => window.print()}>
             <Printer size={15} /> Print
           </button>
@@ -91,7 +91,10 @@ export default function TripView(props: Props) {
             <ol className="relative space-y-2 pl-5">
               <span className="absolute top-3 bottom-3 left-[5px] w-px" style={{ background: 'var(--line)' }} aria-hidden />
               {day.stops.map((s, i) => (
-                <StopCard key={s.placeId} {...props} dayIndex={day.index} index={i} last={i === day.stops.length - 1} />
+                <Fragment key={s.placeId}>
+                  <Leg day={day} index={i} />
+                  <StopCard {...props} dayIndex={day.index} index={i} last={i === day.stops.length - 1} />
+                </Fragment>
               ))}
             </ol>
           )}
@@ -119,15 +122,19 @@ function StopCard({ plan, prefs, dayIndex, index, last, focusId, onFocus, onMove
         className={`absolute top-4 -left-5 h-[11px] w-[11px] rounded-full border-2 ${active ? 'border-bh bg-bh' : 'border-[var(--line)] bg-[var(--bg)]'}`}
         aria-hidden
       />
-      <div className={`surface rounded-2xl border p-3 transition-colors ${active ? 'border-bh/60' : 'hairline'}`}>
+      <div className={`surface rounded-2xl border p-3 transition-colors ${active ? 'border-bh/60' : 'hairline'} ${stop.meal ? 'border-l-4 !border-l-bh' : ''}`}>
         <div className="flex gap-3">
           <button className="shrink-0 self-start text-left" onClick={() => onFocus(p.id)} aria-label={`Show ${p.name} on the map`}>
             <PlacePhoto place={p} className="h-14 w-14 rounded-xl" />
           </button>
           <div className="min-w-0 flex-1">
+            {stop.meal && (
+              <p className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-bh-soft px-2.5 py-0.5 text-xs font-semibold text-bh">
+                <UtensilsCrossed size={13} /> {stop.meal[0].toUpperCase() + stop.meal.slice(1)} at {p.name}
+              </p>
+            )}
             <p className="text-sm font-semibold tabular-nums">
               {fmt(stop.arrive)} – {fmt(stop.leave)}
-              {stop.meal && <span className="ml-2 rounded-md bg-bh-soft px-1.5 py-0.5 text-xs font-medium text-bh">{stop.meal}</span>}
             </p>
             <button className="block text-left" onClick={() => onFocus(p.id)}>
               <span className="font-display block text-[1.05rem] leading-snug font-semibold">{p.name}</span>
@@ -223,6 +230,42 @@ function StopCard({ plan, prefs, dayIndex, index, last, focusId, onFocus, onMove
   )
 }
 
+const DAY_DATE = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+
+const hm = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}` : `${m} min`)
+
+/** The journey into a stop: drive or walk time, any free time before it, and a directions link. */
+function Leg({ day, index }: { day: Day; index: number }) {
+  const s = day.stops[index]
+  const to = PLACE_BY_ID[s.placeId]
+  const from = legStart(day, index)
+  const walk = s.travel <= 5
+  const departs = s.arrive - s.travel
+  const idle = s.idle ?? 0
+  const h = hoursOn(to, day.weekday)
+  const why = s.meal ? `before ${s.meal}` : h && s.arrive === h[0] ? `until it opens at ${fmt(h[0])}` : 'to rest or wander'
+  return (
+    <li className="relative -ml-5 flex flex-wrap items-center gap-x-2 gap-y-1 py-0.5 pl-5 text-xs muted">
+      {idle >= 15 && (
+        <span className="basis-full">
+          <Coffee size={13} className="mr-1 inline -translate-y-px" />
+          Free time {hm(idle)} {why}
+          {s.meal === 'dinner' && idle >= 90 ? ', a good moment to rest at the hotel' : ''}.
+        </span>
+      )}
+      <span>
+        {walk ? <Footprints size={13} className="mr-1 inline -translate-y-px" /> : <Car size={13} className="mr-1 inline -translate-y-px" />}
+        {walk ? `${s.travel} min walk` : `${s.travel} min drive incl. parking`} from {index === 0 ? BASE.name : from.name}, leave {fmt(departs)}
+      </span>
+      {!walk && (
+        <a className="no-print underline underline-offset-2" href={mapsDirections(from, to)} target="_blank" rel="noreferrer">
+          Directions
+        </a>
+      )}
+    </li>
+  )
+}
+
 function StopPrice({ stop, prefs }: { stop: Plan['days'][number]['stops'][number]; prefs: Prefs }) {
   const g = { adults: prefs.adults, children: prefs.children }
   const b = stopCost(stop, g)
@@ -269,8 +312,8 @@ function DayCover({ day, color, spend }: { day: Day; color: string; spend: strin
           </h3>
         </div>
         <p className="mt-1 text-sm text-pearl/85">
-          {WEEKDAYS[day.weekday]}
-          {where ? ` around ${where}` : ''}, from {BASE.name}
+          {day.date ? DAY_DATE.format(new Date(`${day.date}T12:00:00`)) : WEEKDAYS[day.weekday]}
+          {where ? ` around ${where}` : ''}. Sunset {fmt(day.sunset)}.
         </p>
         <p className="mt-0.5 text-sm font-semibold text-pearl">Day estimate ≈ {spend}</p>
       </div>

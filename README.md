@@ -16,6 +16,7 @@ Built with Claude for the Bahrain Polytechnic **AI Literacy** course (Week 9, Se
 | ![Day cover photo](docs/screenshots/photo-day-cover.jpg) | ![Explore with photos](docs/screenshots/photo-explore.jpg) | ![Map popup with photo](docs/screenshots/photo-map-popup.jpg) |
 | ![Trip cost summary](docs/screenshots/cost-summary.jpg) | ![Over the spending limit](docs/screenshots/cost-limit-warning.jpg) | ![Checked prices in Explore](docs/screenshots/explore-prices-dark.jpg) |
 | ![Theme picker](docs/screenshots/theme-picker.jpg) | ![Sukkar theme](docs/screenshots/theme-sukkar.jpg) | ![Nokhatha theme](docs/screenshots/theme-nokhatha.jpg) |
+| ![Today: what's next](docs/screenshots/today-next.jpg) | ![Today timeline](docs/screenshots/today-timeline.jpg) | ![Add to calendar](docs/screenshots/calendar-menu.jpg) |
 
 ## Features
 
@@ -30,6 +31,10 @@ Built with Claude for the Bahrain Polytechnic **AI Literacy** course (Week 9, Se
 - **Spending limit.** Set an optional limit for the whole trip, or write "under 60 BD". Rihla re-plans with a growing penalty on cost per person until the estimate fits, and says how many times it re-planned. If even the cheapest plan is over, it tells you honestly, rather than hiding it.
 - **Checked data, with sources.** Every place records where its facts were checked and when. Facts that sources disagree on are marked approximate, and that label shows in the app. See [`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md).
 - **Real photos, credited.** 22 places show a freely licensed photo from Wikimedia Commons. It appears as the hero image in Explore, a cover for each day of the trip, thumbnails on stops, and in map popups. Every large photo carries an author, licence and source credit. The other 8 places get an illustrated tile with an eight-point star lattice in the colour of their category. Images are lazy-loaded and fall back to the illustration if one fails to load.
+- **Timing you can trust.** Pick a start date, and each day uses that weekday's real hours (Fridays included, when many souqs and sites open only in the afternoon) and the actual sunset time in Manama for that date. Drive times allow for urban traffic, the causeways to Muharraq, faster highways to the south, and 7 minutes to park. Lunch falls between 12:00 and 3 pm and dinner between 6:45 and 9:30 pm, at places that serve that meal and are open. Free time is shown and explained, and nothing runs past the end of your day. An automated audit checks 15,552 generated plans for these rules (`npm run schedule`).
+- **Meals and journeys at a glance.** Meal stops carry a "Lunch at …" badge. Between stops you see the drive or walk time, when to leave, any free time, and a Google Maps directions link.
+- **Add to any calendar.** One .ics file for the whole trip (Apple Calendar, Outlook desktop, phone calendars, or imported into Google Calendar, with a how-to). There are also one-tap links per stop for Google Calendar, Outlook.com and Office 365. Every event has the address and coordinates, a Maps link, the group's estimated cost, and a 30-minute reminder in the .ics file.
+- **Today view.** On the day, a live timeline follows Bahrain time: a "now" marker, where you are, what's next, when to leave, and one-tap directions. Before the trip, drag the time to preview any day.
 - **Six colour themes.** Light and Dark, plus four themes with a Bahraini mood: **Sukkar** (سكر, blush, rose and warm cream), **Lulu** (لؤلؤ, pearl, silver and deep sea), **Ghaf** (غاف, desert sand, olive and terracotta) and **Nokhatha** (نوخذة, a dhow captain's navy, brass and gold). Each is a complete token set, covering the page, cards, text, accent, header, map tiles, route and pin colours, and photo overlays. Every theme passes WCAG AA contrast (`npm run contrast`). The picker shows a swatch for each, and your choice is saved on the device.
 - **Made for Bahrain.** Bilingual place names, the serrated edge from the Bahraini flag as the signature detail, and a mobile layout with a full-screen map tab.
 
@@ -85,7 +90,8 @@ src/
   lib/planner.ts        scoring, scheduling, re-timing, swap suggestions, explanations
   lib/parse.ts          plain-language request → settings, with evidence
   lib/cost.ts           group size, per-stop, per-day and trip estimates
-  lib/share.ts          save, share links, calendar export
+  lib/share.ts          save, share links, .ics calendar export
+  lib/links.ts          Google Calendar, Outlook and Google Maps links
   lib/themes.ts         the six colour themes as token sets
   components/           PlanForm, TripView, Explore, MapView, small UI parts
 scripts/sample-plans.ts prints sample itineraries for checking planner changes
@@ -103,6 +109,8 @@ npm run sample     # print sample itineraries and cost estimates
 npm run sources    # regenerate docs/DATA-SOURCES.md from the data
 npm run check      # check that a spending limit never makes a plan dearer
 npm run contrast   # check every colour theme against WCAG AA
+npm run schedule   # audit 15,552 generated plans for hours, meals, drives, sunset and gaps
+npm test           # all of the checks above
 ```
 
 ## Limits

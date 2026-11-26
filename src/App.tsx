@@ -1,25 +1,29 @@
 import { useEffect, useRef, useState } from 'react'
-import { Compass, ListOrdered, Map as MapIcon, SlidersHorizontal } from 'lucide-react'
-import PlanForm from './components/PlanForm'
+import { CalendarClock, Compass, ListOrdered, Map as MapIcon, SlidersHorizontal } from 'lucide-react'
+import PlanForm, { todayIso } from './components/PlanForm'
 import TripView from './components/TripView'
+import TodayView from './components/TodayView'
 import Explore from './components/Explore'
 import MapView from './components/MapView'
 import { Arabic } from './components/bits'
 import ThemePicker from './components/ThemePicker'
 import { applyTheme, initialTheme, type Theme } from './lib/themes'
-import { DEFAULT_PREFS, buildPlan, makeStop, retime, type Plan, type Prefs } from './lib/planner'
+import { DEFAULT_PREFS, addDays, buildPlan, makeStop, retime, sunsetMinutes, weekdayOf, type Plan, type Prefs } from './lib/planner'
 import { download, loadFromHash, loadLocal, saveLocal, shareUrl, toIcs } from './lib/share'
 
-type Tab = 'plan' | 'trip' | 'explore' | 'map'
+type Tab = 'plan' | 'trip' | 'today' | 'explore' | 'map'
 
 /** Rebuild a saved trip (ids only) into a timed plan. */
 function restore(prefs: Prefs, days: string[][]): Plan {
   const fresh = buildPlan(prefs)
   return {
     skipped: fresh.skipped,
-    days: days.map((ids, i) =>
-      retime({ index: i, weekday: (prefs.weekday + i) % 7, stops: ids.map((id) => fresh.days[i]?.stops.find((s) => s.placeId === id) ?? makeStop(id, prefs)) }, prefs),
-    ),
+    days: days.map((ids, i) => {
+      const weekday = prefs.date ? weekdayOf(addDays(prefs.date, i)) : (prefs.weekday + i) % 7
+      const date = prefs.date ? addDays(prefs.date, i) : null
+      const stops = ids.map((id) => fresh.days[i]?.stops.find((s) => s.placeId === id) ?? makeStop(id, prefs))
+      return retime({ index: i, weekday, date, sunset: sunsetMinutes(date), stops }, prefs)
+    }),
   }
 }
 
@@ -28,7 +32,9 @@ function initial(): { prefs: Prefs; plan: Plan | null; from: 'link' | 'saved' | 
   if (s) return { prefs: { ...DEFAULT_PREFS, ...s.prefs }, plan: restore({ ...DEFAULT_PREFS, ...s.prefs }, s.days), from: 'link' }
   const l = loadLocal()
   if (l) return { prefs: { ...DEFAULT_PREFS, ...l.prefs }, plan: restore({ ...DEFAULT_PREFS, ...l.prefs }, l.days), from: 'saved' }
-  return { prefs: DEFAULT_PREFS, plan: null, from: null }
+  // a fresh visit plans from tomorrow, so hours, sunset and calendar dates are real
+  const tomorrow = addDays(todayIso(), 1)
+  return { prefs: { ...DEFAULT_PREFS, date: tomorrow, weekday: weekdayOf(tomorrow) }, plan: null, from: null }
 }
 
 export default function App() {
@@ -86,6 +92,7 @@ export default function App() {
   const tabs: { id: Tab; label: string; icon: typeof Compass; mobileOnly?: boolean; disabled?: boolean }[] = [
     { id: 'plan', label: 'Plan', icon: SlidersHorizontal },
     { id: 'trip', label: 'Trip', icon: ListOrdered, disabled: !plan },
+    { id: 'today', label: 'Today', icon: CalendarClock, disabled: !plan },
     { id: 'explore', label: 'Explore', icon: Compass },
     { id: 'map', label: 'Map', icon: MapIcon, mobileOnly: true },
   ]
@@ -102,14 +109,14 @@ export default function App() {
             </div>
             <ThemePicker theme={theme} onChange={setTheme} />
           </div>
-          <nav className="flex gap-1 px-3" aria-label="Sections">
+          <nav className="no-scrollbar flex gap-0.5 overflow-x-auto px-2 sm:gap-1 sm:px-3" aria-label="Sections">
             {tabs.map((t) => (
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
                 disabled={t.disabled}
                 aria-current={tab === t.id ? 'page' : undefined}
-                className={`relative flex items-center gap-1.5 rounded-t-lg px-3 pt-2 pb-2.5 text-sm font-medium transition-colors disabled:opacity-40 ${
+                className={`relative flex shrink-0 items-center gap-1 rounded-t-lg px-2 pt-2 pb-2.5 text-[13px] font-medium sm:gap-1.5 sm:px-3 sm:text-sm transition-colors disabled:opacity-40 ${
                   t.mobileOnly ? 'lg:hidden' : ''
                 } ${tab === t.id ? 'bg-[var(--bg)] text-[var(--text)]' : 'text-pearl/75 hover:text-pearl'}`}
               >
@@ -167,6 +174,7 @@ export default function App() {
               }}
             />
           )}
+          {tab === 'today' && plan && <TodayView plan={plan} prefs={prefs} />}
           {tab === 'explore' && (
             <Explore
               plan={plan}

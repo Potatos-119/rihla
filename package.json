@@ -11,7 +11,9 @@
     "sample": "tsx scripts/sample-plans.ts",
     "sources": "tsx scripts/data-sources.ts",
     "check": "tsx scripts/check-limits.ts",
-    "contrast": "tsx scripts/check-contrast.ts"
+    "contrast": "tsx scripts/check-contrast.ts",
+    "schedule": "tsx scripts/check-schedule.ts",
+    "test": "tsx scripts/check-schedule.ts && tsx scripts/check-limits.ts && tsx scripts/check-contrast.ts"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",

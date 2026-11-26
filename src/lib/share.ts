@@ -1,6 +1,8 @@
 import { PLACE_BY_ID } from '../data/places'
 import type { Plan, Prefs } from './planner'
-import { formatRange, peopleLabel, stopCost, total, type Group } from './cost'
+import type { Group } from './cost'
+import { eventText, mapsPlace } from './links'
+import { addDays } from './planner'
 
 interface Saved {
   prefs: Prefs
@@ -60,40 +62,70 @@ export function loadFromHash(): Saved | null {
   return valid(s) ? s : null
 }
 
-/** Calendar file for the trip, starting on the next date that falls on the chosen weekday. */
-export function toIcs(plan: Plan, group: Group): string {
+/** The calendar date of each trip day: the chosen start date, or else the next matching weekday. */
+export function tripDates(plan: Plan): string[] {
+  if (plan.days[0]?.date) return plan.days.map((d) => d.date!)
   const today = new Date()
-  const first = new Date(today)
   const offset = (plan.days[0].weekday - today.getDay() + 7) % 7 || 7
-  first.setDate(today.getDate() + offset)
-  const stamp = (d: Date, min: number) => {
-    const x = new Date(d)
-    x.setHours(Math.floor(min / 60), min % 60, 0, 0)
-    const p = (n: number) => String(n).padStart(2, '0')
-    return `${x.getFullYear()}${p(x.getMonth() + 1)}${p(x.getDate())}T${p(x.getHours())}${p(x.getMinutes())}00`
+  const first = new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset, 12)
+  const iso = `${first.getFullYear()}-${String(first.getMonth() + 1).padStart(2, '0')}-${String(first.getDate()).padStart(2, '0')}`
+  return plan.days.map((_, i) => addDays(iso, i))
+}
+
+const esc = (t: string) => t.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n')
+
+/** RFC 5545 lines must be folded at 75 octets. */
+function fold(line: string): string {
+  const out: string[] = []
+  let cur = ''
+  for (const ch of line) {
+    if (new TextEncoder().encode(cur + ch).length > 74) {
+      out.push(cur)
+      cur = ' ' + ch
+    } else cur += ch
   }
-  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Rihla//Bahrain trip planner//EN', 'X-WR-TIMEZONE:Asia/Bahrain']
+  out.push(cur)
+  return out.join('\r\n')
+}
+
+/** Bahrain is UTC+3 all year, so local minutes convert to UTC by subtracting 3 hours. */
+function utc(date: string, min: number): string {
+  const d = new Date(`${date}T00:00:00Z`)
+  d.setUTCMinutes(min - 180)
+  return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+}
+
+/** Calendar file for the whole trip, with a reminder 30 minutes before each stop. */
+export function toIcs(plan: Plan, group: Group): string {
+  const dates = tripDates(plan)
+  const now = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Rihla//Bahrain trip planner//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Rihla trip to Bahrain', 'X-WR-TIMEZONE:Asia/Bahrain']
   plan.days.forEach((day, i) => {
-    const date = new Date(first)
-    date.setDate(first.getDate() + i)
     day.stops.forEach((s, j) => {
       const p = PLACE_BY_ID[s.placeId]
+      const e = eventText(s, group)
       lines.push(
         'BEGIN:VEVENT',
-        `UID:rihla-${i}-${j}-${p.id}@rihla`,
-        `DTSTAMP:${stamp(today, today.getHours() * 60 + today.getMinutes())}`,
-        `DTSTART;TZID=Asia/Bahrain:${stamp(date, s.arrive)}`,
-        `DTEND;TZID=Asia/Bahrain:${stamp(date, s.leave)}`,
-        `SUMMARY:${p.name}`,
-        `LOCATION:${p.name}\\, ${p.area}\\, Bahrain`,
+        `UID:rihla-${dates[i]}-${j}-${p.id}@potatos-119.github.io`,
+        `DTSTAMP:${now}`,
+        `DTSTART:${utc(dates[i], s.arrive)}`,
+        `DTEND:${utc(dates[i], s.leave)}`,
+        `SUMMARY:${esc(e.title)}`,
+        `LOCATION:${esc(e.location)}`,
         `GEO:${p.lat};${p.lng}`,
-        `DESCRIPTION:${(`Estimated ${formatRange(total(stopCost(s, group)))} ${peopleLabel(group)}. ` + p.tip).replace(/,/g, '\\,')}`,
+        `URL:${mapsPlace(p)}`,
+        `DESCRIPTION:${esc(e.details)}`,
+        'BEGIN:VALARM',
+        'ACTION:DISPLAY',
+        `DESCRIPTION:${esc(e.title)} in 30 minutes`,
+        'TRIGGER:-PT30M',
+        'END:VALARM',
         'END:VEVENT',
       )
     })
   })
   lines.push('END:VCALENDAR')
-  return lines.join('\r\n')
+  return lines.map(fold).join('\r\n') + '\r\n'
 }
 
 export function download(name: string, text: string, type: string) {
